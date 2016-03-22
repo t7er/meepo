@@ -6,10 +6,12 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"mime"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -67,6 +69,36 @@ func (this *Context) Write(content interface{}) {
 
 func (this *Context) Url(name string, args ...interface{}) *URL {
 	return this.Applet.Url(name, args...)
+}
+
+func (this *Context) Html(dict map[string]interface{}, filenames ...string) {
+	if len(filenames) == 0 {
+		panic("html/template: no files named")
+		return
+	}
+	var e error
+	this.Applet.Config.FuncMap["Url"] = this.Url
+	t := template.New(filepath.Base(filenames[0])).Funcs(this.Applet.Config.FuncMap)
+	for _, filename := range filenames {
+		s, ok := this.Applet.Config.Temps[filename]
+		if !ok {
+			panic("html/template: no files named in call to ParseFiles")
+		}
+		name := filepath.Base(filename)
+		var tmpl *template.Template
+		if name == t.Name() {
+			tmpl = t
+		} else {
+			tmpl = t.New(name)
+		}
+		if _, e = tmpl.Parse(string(s)); e != nil {
+			panic(e)
+		}
+	}
+
+	if e = t.Execute(this.ResponseWriter, dict); e != nil {
+		panic(e)
+	}
 }
 
 // Abort is a helper method that sends an HTTP header and an optional

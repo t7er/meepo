@@ -3,6 +3,7 @@ package web
 import (
 	"bytes"
 	"fmt"
+	"html/template"
 	"log"
 	"net"
 	"net/http"
@@ -47,6 +48,8 @@ func (this *Applet) Url(name string, args ...interface{}) *URL {
 type Config struct {
 	AppPath string
 	Host    string
+	Temps   map[string][]byte
+	FuncMap template.FuncMap
 	//	StaticDir    string
 	Addr         string
 	Port         int
@@ -63,6 +66,8 @@ func (this *Applet) Init() *Applet {
 	this.Logger.SetFlags(log.Lshortfile | log.LstdFlags)
 	this.Config = &Config{
 		RecoverPanic: true,
+		Temps:        map[string][]byte{},
+		FuncMap:      map[string]interface{}{},
 	}
 	this.routes = make(Routes)
 	this.initFn = reflect.ValueOf(func(ctx *Context) *Context {
@@ -224,7 +229,6 @@ func (this *Route) WS(handler http.Handler) *Route {
 }
 
 func (this *Applet) RouteHandler(w http.ResponseWriter, req *http.Request) {
-
 	ctx := Context{req, map[string]string{}, this, w}
 	tm := time.Now().UTC()
 	ctx.SetHeader("Server", "Meepo", true)
