@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/base64"
 	"errors"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -108,4 +110,19 @@ func (this *Context) GetBasicAuth() (string, string, error) {
 		return "", "", errors.New("Error delimiting authString into username/password. Malformed input: " + authString[1])
 	}
 	return authSlice[0], authSlice[1], nil
+}
+
+//load theme files
+func loadTempMap(themePath string) map[string][]byte {
+	var temps = map[string][]byte{}
+	filepath.Walk(themePath, filepath.WalkFunc(func(p string, f os.FileInfo, e error) error {
+		if f.Name() != ".DS_Store" && !f.IsDir() {
+			name := strings.TrimPrefix(p, themePath)
+			if ra, e := ioutil.ReadFile(p); e == nil {
+				temps[name] = ra
+			}
+		}
+		return e
+	}))
+	return temps
 }

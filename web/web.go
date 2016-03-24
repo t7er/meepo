@@ -80,9 +80,11 @@ func (this *Context) Html(dict map[string]interface{}, filenames ...string) {
 	this.Applet.Config.FuncMap["Url"] = this.Url
 	t := template.New(filepath.Base(filenames[0])).Funcs(this.Applet.Config.FuncMap)
 	for _, filename := range filenames {
-		s, ok := this.Applet.Config.Temps[filename]
+		s, ok := this.Applet.Config.tempMap[filename]
 		if !ok {
-			panic("html/template: no files named in call to ParseFiles")
+			if s, e = ioutil.ReadFile(filepath.Join(this.Applet.Config.themeDir, filename)); e != nil {
+				panic(e)
+			}
 		}
 		name := filepath.Base(filename)
 		var tmpl *template.Template
@@ -220,7 +222,9 @@ func (this *Context) GetSecureCookie(name string) (string, bool) {
 		}
 
 		parts := strings.SplitN(cookie.Value, "|", 3)
-
+		if len(parts) < 3 {
+			return "", false
+		}
 		val := parts[0]
 		timestamp := parts[1]
 		sig := parts[2]

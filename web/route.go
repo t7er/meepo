@@ -8,7 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/pprof"
-	"net/url"
+	//"net/url"
 	"os"
 	"reflect"
 	"regexp"
@@ -26,7 +26,7 @@ type Applet struct {
 }
 
 func (this *Applet) Url(name string, args ...interface{}) *URL {
-	var link = &URL{url.URL{Scheme: "http", Host: this.Config.Host}}
+	var link = &URL{}
 	if route, ok := this.routes[strings.ToUpper(name)]; ok {
 		reg := regexp.MustCompile(`\([^()]*\)`)
 		str := reg.ReplaceAllString(route.r, "%s")
@@ -46,10 +46,11 @@ func (this *Applet) Url(name string, args ...interface{}) *URL {
 }
 
 type Config struct {
+	Debug   bool
 	AppPath string
-	Host    string
-	Temps   map[string][]byte
-	FuncMap template.FuncMap
+	themeDir string
+	tempMap  map[string][]byte
+	FuncMap  template.FuncMap
 	//	StaticDir    string
 	Addr         string
 	Port         int
@@ -59,14 +60,15 @@ type Config struct {
 }
 type Routes map[string]*Route
 
-func (this *Applet) Init() *Applet {
+func (this *Applet) Init(themePath string) *Applet {
 	if this.Logger == nil {
 		this.Logger = log.New(os.Stdout, "", log.Ldate|log.Ltime)
 	}
 	this.Logger.SetFlags(log.Lshortfile | log.LstdFlags)
 	this.Config = &Config{
 		RecoverPanic: true,
-		Temps:        map[string][]byte{},
+		themeDir:     themePath,
+		tempMap:      map[string][]byte{},
 		FuncMap:      map[string]interface{}{},
 	}
 	this.routes = make(Routes)
@@ -88,6 +90,10 @@ func (this *Applet) InitFn(fn interface{}) *Applet {
 }
 
 func (this *Applet) Run() {
+	if !this.Config.Debug {
+		this.Config.tempMap = loadTempMap(this.Config.themeDir)
+	}
+
 	mux := http.NewServeMux()
 	mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
 	mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
