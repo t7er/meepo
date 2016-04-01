@@ -46,8 +46,8 @@ func (this *Applet) Url(name string, args ...interface{}) *URL {
 }
 
 type Config struct {
-	Debug   bool
-	AppPath string
+	Debug    bool
+	AppPath  string
 	themeDir string
 	tempMap  map[string][]byte
 	FuncMap  template.FuncMap
@@ -235,7 +235,7 @@ func (this *Route) WS(handler http.Handler) *Route {
 }
 
 func (this *Applet) RouteHandler(w http.ResponseWriter, req *http.Request) {
-	ctx := Context{req, map[string]string{}, this, w}
+	ctx := Context{isBreak: false, Request: req, Params: map[string]string{}, Applet: this, ResponseWriter: w}
 	tm := time.Now().UTC()
 	ctx.SetHeader("Server", "Meepo", true)
 	ctx.SetHeader("Date", webTime(tm), true)
@@ -284,13 +284,16 @@ func (this *Applet) RouteHandler(w http.ResponseWriter, req *http.Request) {
 			fn = this.initFn
 		}
 		page := fn.Call([]reflect.Value{reflect.ValueOf(&ctx)})[0]
-		isEnd := ctx.ResponseWriter.Header().Get("Location")
-		if len(isEnd) > 0 {
-			this.Logger.Println(ctx.ResponseWriter.Header())
-			this.Logger.Println("isEnd", isEnd, len(isEnd))
-			return
-		}
+		//isEnd := ctx.ResponseWriter.Header().Get("Location")
+		//if len(isEnd) > 0 {
+		//	this.Logger.Println(ctx.ResponseWriter.Header())
+		//	this.Logger.Println("isEnd", isEnd, len(isEnd))
+		//	return
+		//}
 		for _, _handler := range funcs {
+			if ctx.isBreak {
+				break
+			}
 			var args []reflect.Value
 			handlerType := _handler.Type()
 			if func(handlerType reflect.Type) bool {

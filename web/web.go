@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -32,6 +33,8 @@ func (this *URL) Add(key, val string) *URL {
 }
 
 type Context struct {
+	isBreak bool
+
 	Request *http.Request
 	Params  map[string]string
 	Applet  *Applet
@@ -45,6 +48,10 @@ func (this *Context) Int(key string, def int) int {
 		}
 	}
 	return def
+}
+
+func (this *Context) Break() {
+	this.isBreak = true
 }
 
 func (this *Context) String(key, def string) string {
@@ -63,7 +70,16 @@ func (this *Context) Write(content interface{}) {
 	case string:
 		this.ResponseWriter.Write([]byte(v))
 	default:
-		this.ResponseWriter.Write([]byte(fmt.Sprint(v)))
+		kind := reflect.ValueOf(v).Kind()
+		if kind == reflect.Map || kind == reflect.Array || kind == reflect.Struct || kind == reflect.Slice {
+			if j, e := json.MarshalIndent(v, "", "  "); e != nil {
+				this.ResponseWriter.Write([]byte(e.Error()))
+			} else {
+				this.ResponseWriter.Write(j)
+			}
+		} else {
+			this.ResponseWriter.Write([]byte(fmt.Sprint(v)))
+		}
 	}
 }
 
